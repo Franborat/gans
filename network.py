@@ -20,12 +20,19 @@ def define_D():
     """
 
 
-def init_weights():
+def init_weights(net):
     """
     Initialize network weights
-    Returns:
+    Returns: Convolutional and BatchNorm layers initialized as in DCGAN paper
 
     """
+    classname = net.__class__.__name__
+
+    if classname.find('Conv') != -1:
+        nn.init.normal_(net.weight.data, mean=0.0, std=0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(net.weight.data, mean=1.0, std=.02)
+        nn.init.constant_(net.bias.data, 0)
 
 
 # Classes
@@ -34,6 +41,24 @@ class GANLoss(nn.Module):
     """
     Define different GAN objective
     """
+    def __init__(self, gan_mode):
+        """
+
+        Args:
+            gan_mode: Adversarial Loss type. Choose between vanilla (log loss) or LSGAN loss (sigmoid + BCE)
+        Note:
+            Do not use sigmoid in the last layer of the discriminator for the vanilla GAN
+            BCEWithLogitsLoss already handles that.
+
+        """
+        super(GANLoss, self).__init__()
+        self.gan_mode = gan_mode
+        if gan_mode == 'lsgan':
+            self.loss = nn.MSELoss()
+        elif gan_mode == 'vanilla':
+            self.loss = nn.BCEWithLogitsLoss()
+        else:
+            raise NotImplementedError('gan mode %s not implemented' % gan_mode)
 
 
 class ConvBlock(nn.Module):
