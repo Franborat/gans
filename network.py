@@ -4,20 +4,57 @@ import torch.nn as nn
 
 # Functions
 
-def define_G():
-    """
-    Create a Discriminator
-    Returns: Generator Network
-
+def define_G(input_nc, ngf, output_nc):
     """
 
+    Args:
+        input_nc: Number of channels of input noise
+        ngf: Number of filters in the last conv layer
+        output_nc: Number of channels of output image
 
-def define_D():
-    """
-    Create a Discriminator
-    Returns: Discriminator network
+    Returns: Generator network with initialized weights
 
     """
+    generator_net = nn.Sequential(
+        # Input layer
+        nn.ConvTranspose2d(in_channels=input_nc, out_channels=ngf * 8, kernel_size=4, stride=1, padding=0, bias=False),
+        nn.BatchNorm2d(num_features=ngf * 8),
+        nn.ReLU(True),
+        # Trans Conv blocks
+        TransposeConvBlock(in_channels=ngf * 8, out_channels=ngf * 4),
+        TransposeConvBlock(in_channels=ngf * 4, out_channels=ngf * 2),
+        TransposeConvBlock(in_channels=ngf * 2, out_channels=ngf),
+        # Output layer
+        nn.ConvTranspose2d(in_channels=ngf, out_channels=output_nc, kernel_size=4, stride=2, padding=1, bias=False)
+    )
+    # Initialize network weights
+    init_weights(generator_net)
+    return generator_net
+
+
+def define_D(input_nc, ngf, output_nc):
+    """
+
+    Args:
+        input_nc: Number of channels of input image
+        ngf: Number of filters in the first conv layer
+        output_nc: Number of channels of output image
+
+    Returns: Discriminator network with initialized weights
+
+    """
+    discriminator_net = nn.Sequential(
+        # Input layer
+        nn.Conv2d(in_channels=input_nc, out_channels=ngf, kernel_size=4, stride=2, padding=1, bias=False),
+        # Conv blocks
+        ConvBlock(in_channels=ngf, out_channels=ngf*2),
+        ConvBlock(in_channels=ngf*2, out_channels=ngf*4),
+        ConvBlock(in_channels=ngf*4, out_channels=ngf*8),
+        # Output layer
+        nn.Conv2d(in_channels=ngf*8, out_channels=output_nc, kernel_size=4, stride=1, padding=0, bias=False)
+    )
+    init_weights(discriminator_net)
+    return discriminator_net
 
 
 def init_weights(net):
