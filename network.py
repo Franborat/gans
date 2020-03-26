@@ -3,6 +3,8 @@ import torch.nn as nn
 
 
 # Functions
+from torch.optim import lr_scheduler
+
 
 def define_G(input_nc, ngf, output_nc):
     """
@@ -47,11 +49,11 @@ def define_D(input_nc, ngf, output_nc):
         # Input layer
         nn.Conv2d(in_channels=input_nc, out_channels=ngf, kernel_size=4, stride=2, padding=1, bias=False),
         # Conv blocks
-        ConvBlock(in_channels=ngf, out_channels=ngf*2),
-        ConvBlock(in_channels=ngf*2, out_channels=ngf*4),
-        ConvBlock(in_channels=ngf*4, out_channels=ngf*8),
+        ConvBlock(in_channels=ngf, out_channels=ngf * 2),
+        ConvBlock(in_channels=ngf * 2, out_channels=ngf * 4),
+        ConvBlock(in_channels=ngf * 4, out_channels=ngf * 8),
         # Output layer
-        nn.Conv2d(in_channels=ngf*8, out_channels=output_nc, kernel_size=4, stride=1, padding=0, bias=False)
+        nn.Conv2d(in_channels=ngf * 8, out_channels=output_nc, kernel_size=4, stride=1, padding=0, bias=False)
     )
     init_weights(discriminator_net)
     return discriminator_net
@@ -72,12 +74,41 @@ def init_weights(net):
         nn.init.constant_(net.bias.data, 0)
 
 
+def get_scheduler(optimizer, opt):
+    """
+
+    Args:
+        optimizer: Optimizer of the network
+        opt: opt.lr_policy stores the name of the learning rate policy
+
+    Returns:
+
+    """
+    # Keep the same lr for the first opt.n_epochs and then decay for the next opt.n_epochs_decay
+    if opt.lr_policy == 'linear':
+        def lambda_rule(epoch):
+            lr_l = 1.0 - max(0, epoch + opt.epoch_count - opt.n_epochs) / float(opt.n_epochs_decay + 1)
+            return lr_l
+        scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
+    elif opt.lr_policy == 'step':
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=opt.lr_decay_iters, gamma=0.1)
+    # Reduce learning rate when a metric has stopped improving
+    elif opt.lr_policy == 'plateau':
+        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, threshold=0.01, patience=5)
+    elif opt.lr_policy == 'cosine':
+        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=opt.n_epochs, eta_min=0)
+    else:
+        return NotImplementedError('learning rate policy [%s] is not implemented', opt.lr_policy)
+    return scheduler
+
+
 # Classes
 
 class GANLoss(nn.Module):
     """
     Define different GAN objective
     """
+
     def __init__(self, gan_mode):
         """
 
