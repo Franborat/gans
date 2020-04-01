@@ -1,7 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 import torch
-import network
+from models import network
 
 
 class BaseModel(ABC):
